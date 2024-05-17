@@ -255,10 +255,14 @@ class Sandbox:
 			args                = [
 				f"--disable-extensions-except={self.extension}",
 				f"--load-extension={self.extension}"
-			]
+			],
+			firefox_user_prefs  = {
+				"media.navigator.permission.disabled": True # for KYC purposes
+			}
 		)
+		if self.browser != "firefox":
+			await self.context.grant_permissions(["camera"]) # for KYC purposes
 		self.context.set_default_timeout(self.timeout)
-		await self.context.grant_permissions(["camera"]) # for KYC purposes
 		# --------------------------------
 		array = (await self.__get_url()).split("://", 1)
 		self.settings["url_base"] = f"{array[0]}://{array[1].split('/', 1)[0]}"
