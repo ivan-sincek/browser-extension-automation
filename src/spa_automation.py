@@ -88,7 +88,7 @@ class Sandbox:
 		self.user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" # change the user agent as necessary
 		self.settings   = {
 			"downloads"   : os.path.join(self.session, "downloads"), # downloads directory
-			"password"    : password, # spa setup and unlock password
+			"password"    : password, # SPA setup and unlock password
 			"wait_time"   : wait, # default wait time
 			"wait_state"  : "load",
 			"css_root"    : "body",
@@ -97,8 +97,8 @@ class Sandbox:
 			"css_text"    : "input[type=text]",
 			"css_email"   : "input[type=email]",
 			"css_password": "input[type=password]",
-			"home_page"   : "home.html", # spa home page
-			"url_base"    : "https://wallet.uniswap.org", # spa base url | specify
+			"home_page"   : "home.html", # SPA home page
+			"url_base"    : "https://wallet.uniswap.org", # SPA base url | specify
 			"url_dapp"    : "https://app.uniswap.org" if not self.dev else "https://app.uniswap.org" # use "self.dev" throughout the code to switch between environments
 		} # change the default variables as necessary
 
