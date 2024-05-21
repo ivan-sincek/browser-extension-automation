@@ -154,3 +154,5 @@ cython_debug/
 # User session directory
 **/automation_*_session
 **/my_automation_session
+**/spa_automation_*_session
+**/my_spa_automation_session

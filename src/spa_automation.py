@@ -46,54 +46,6 @@ def read_array(file, sort = False):
 					array.append(line)
 	return unique(array, sort)
 
-def file_remove(file):
-	success = True
-	if os.path.exists(file):
-		if not os.path.isfile(file):
-			success = False
-			print_error(f"Cannot remove \"{file}\" because it is not a file")
-		else:
-			try:
-				os.remove(file)
-			except Exception:
-				success = False
-				print_error(f"Cannot remove \"{file}\" file")
-	return success
-
-def file_copy(source, destination):
-	success = True
-	if not os.path.isfile(source):
-		success = False
-		print_error(f"Source \"{source}\" is not a file or does not exists")
-	elif os.path.exists(destination):
-		if not os.path.isfile(destination):
-			success = False
-			print_error(f"Destination \"{destination}\" is not a file")
-		else:
-			confirm = print_action(f"Destination \"{destination}\" file already exists, overwrite (yes): ").lower()
-			success = file_remove(destination) if confirm in ["yes", "y"] else False
-	if success:
-		try:
-			shutil.copyfile(source, destination)
-		except Exception:
-			success = False
-			print_error(f"Cannot copy \"{source}\" file to \"{destination}\" file")
-	return success
-
-def directory_remove(directory):
-	success = True
-	if os.path.exists(directory):
-		if not os.path.isdir(directory):
-			success = False
-			print_error(f"Cannot remove \"{directory}\" because it is not a directory")
-		else:
-			try:
-				shutil.rmtree(directory)
-			except Exception:
-				success = False
-				print_error(f"Cannot remove \"{directory}\" directory")
-	return success
-
 def directory_create(directory):
 	success = True
 	if not os.path.exists(directory):
@@ -105,91 +57,7 @@ def directory_create(directory):
 	return success
 
 def directory_create_tmp():
-	return tempfile.mkdtemp(prefix = "automation_", suffix = "_session", dir = os.getcwd()) # create a new random directory in the current working directory and return its absolute path
-
-def directory_copy(source, destination):
-	success = True
-	if not os.path.isdir(source):
-		success = False
-		print_error(f"Source \"{source}\" is not a directory or does not exists")
-	elif os.path.exists(destination):
-		if not os.path.isdir(destination):
-			success = False
-			print_error(f"Destination \"{destination}\" is not a directory")
-		else:
-			confirm = print_action(f"Destination \"{destination}\" directory already exists, overwrite (yes): ").lower()
-			success = directory_remove(destination) if confirm in ["yes", "y"] else False
-	if success:
-		try:
-			shutil.copytree(source, destination)
-		except Exception:
-			success = False
-			print_error(f"Cannot copy \"{source}\" directory to \"{destination}\" directory")
-	return success
-
-def directory_has_manifest(directory):
-	success = True
-	if not os.path.isdir(directory):
-		success = False
-		print_error(f"\"{directory}\" is not a directory or does not exists")
-	elif "manifest.json" not in [file.lower() for file in os.listdir(directory)]:
-		success = False
-		print_error(f"\"manifest.json\" file was not found in \"{directory}\" directory")
-	return success
-
-def directory_get_chromium_extension(directory):
-	extension = ""
-	if not os.path.isdir(directory):
-		print_error(f"\"{directory}\" is not a directory or does not exists")
-	else:
-		directories = sorted(os.listdir(directory), key = str.casefold, reverse = True) # sort by name descending
-		if not directories:
-			print_error(f"\"{directory}\" directory is empty")
-		else:
-			directory = os.path.join(directory, directories[0])
-			if directory_has_manifest(directory):
-				extension = directory
-	return extension
-
-def directory_get_firefox_extension(directory, identifier): # playwright does not actually support firefox extensions
-	extension = ""
-	if not os.path.isdir(directory):
-		print_error(f"\"{directory}\" is not a directory or does not exists")
-	else:
-		directories = sorted(os.listdir(directory), key = str.casefold, reverse = True) # sort by name descending
-		directories = [directory for directory in directories if directory.endswith(".default-release")]
-		if not directories:
-			print_error(f"No \"*.default-release\" directory was found in \"{directory}\" directory")
-		else:
-			file = os.path.join(directory, directories[0], "extensions", identifier)
-			if not os.path.isfile(file):
-				print_error(f"\"{file}\" is not a file or does not exists")
-			else:
-				extension = file
-	return extension
-
-def directory_get_browser_extension(browser, identifier):
-	extension = ""
-	system = platform.system().lower()
-	user = os.path.expanduser("~")
-	context = {
-		"darwin" : {
-			"chromium": os.path.join(user, "Library", "Application Support", "Google", "Chrome", "Default", "Extensions", identifier),
-			"firefox" : os.path.join(user, "Library", "Application Support", "Firefox", "Profiles")
-		},
-		"windows" : {
-			"chromium": os.path.join(user, "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Extensions", identifier),
-			"firefox" : f""
-		},
-		"linux" : {
-			"chromium": os.path.join(user, ".config", "google-chrome", "Default", "Extensions", identifier),
-			"firefox" : f""
-		}
-	}
-	extension = directory_get_chromium_extension(context[system][browser]) if browser == "chromium" else directory_get_firefox_extension(context[system][browser], identifier)
-	if not extension:
-		print_error("Browser extension was not found, please pass it manually using the \"-e\" option")
-	return extension
+	return tempfile.mkdtemp(prefix = "spa_automation_", suffix = "_session", dir = os.getcwd()) # create a new random directory in the current working directory and return its absolute path
 
 # ----------------------------------------
 
@@ -209,10 +77,9 @@ def get_extra_value(numeric = False, **kwargs):
 
 class Sandbox:
 
-	def __init__(self, browser, session, extension, password, wait, dev, proxy):
+	def __init__(self, browser, session, password, wait, dev, proxy):
 		self.browser    = browser
 		self.session    = os.path.abspath(session)
-		self.extension  = os.path.abspath(extension)
 		self.dev        = dev
 		self.proxy      = proxy
 		self.playwright = None
@@ -221,7 +88,7 @@ class Sandbox:
 		self.user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" # change the user agent as necessary
 		self.settings   = {
 			"downloads"   : os.path.join(self.session, "downloads"), # downloads directory
-			"password"    : password, # browser extension setup and unlock password
+			"password"    : password, # spa setup and unlock password
 			"wait_time"   : wait, # default wait time
 			"wait_state"  : "load",
 			"css_root"    : "body",
@@ -230,8 +97,8 @@ class Sandbox:
 			"css_text"    : "input[type=text]",
 			"css_email"   : "input[type=email]",
 			"css_password": "input[type=password]",
-			"home_page"   : "home.html", # browser extension home page
-			"url_base"    : "", # browser extension base url | reserved
+			"home_page"   : "home.html", # spa home page
+			"url_base"    : "https://wallet.uniswap.org", # spa base url | specify
 			"url_dapp"    : "https://app.uniswap.org" if not self.dev else "https://app.uniswap.org" # use "self.dev" throughout the code to switch between environments
 		} # change the default variables as necessary
 
@@ -252,10 +119,7 @@ class Sandbox:
 			user_agent          = self.user_agent,
 			user_data_dir       = self.session,
 			downloads_path      = self.settings["downloads"],
-			args                = [
-				f"--disable-extensions-except={self.extension}",
-				f"--load-extension={self.extension}"
-			],
+			args                = [],
 			firefox_user_prefs  = {
 				"media.navigator.permission.disabled": True # for KYC purposes
 			}
@@ -264,17 +128,7 @@ class Sandbox:
 			await self.context.grant_permissions(["camera"]) # for KYC purposes
 		self.context.set_default_timeout(self.timeout)
 		# --------------------------------
-		array = (await self.__get_url()).split("://", 1)
-		self.settings["url_base"] = f"{array[0]}://{array[1].split('/', 1)[0]}"
-		# --------------------------------
 		print_info(f"Running a {self.browser} sandbox...")
-
-	async def __get_url(self):
-		manifest_version = json.loads(open(os.path.join(self.extension, "manifest.json"), "r", encoding = "UTF-8").read())["manifest_version"]
-		if manifest_version >= 3:
-			return (await self.context.wait_for_event("serviceworker") if not self.context.service_workers else self.context.service_workers[0]).url
-		else:
-			return (await self.context.wait_for_event("backgroundpage") if not self.context.background_pages else self.context.background_pages[0]).url
 
 	async def browser_stop(self):
 		await self.context.close()
@@ -301,7 +155,7 @@ class Sandbox:
 		await self.__wait(page) # web pages usually need some time to fully load
 		return response
 
-	async def __goto_browser_extension(self, page, path = ""):
+	async def __goto_spa(self, page, path = ""):
 		if not path:
 			path = self.settings["home_page"]
 		return await self.__goto(page, f"{self.settings['url_base']}/{path.lstrip('/')}")
@@ -446,18 +300,18 @@ class Sandbox:
 
 	async def __lock(self, page):
 		if not await self.__locked(page):
-			await self.__goto_browser_extension(page, f"{self.settings['home_page']}#lock")
+			await self.__goto_spa(page, f"{self.settings['home_page']}#lock")
 
 	# ------------------------------------
 
 	async def open(self, **kwargs):
 		page = await self.__new_page()
-		await self.__goto_browser_extension(page)
+		await self.__goto_spa(page)
 		# await self.__close(page)
 
 	async def create(self, **kwargs):
 		page = await self.__new_page()
-		await self.__goto_browser_extension(page)
+		await self.__goto_spa(page)
 		if await self.__is_not_created(page):
 			await self.__tick(page)
 			await self.__submit(page, "button", "create a new wallet")
@@ -475,7 +329,7 @@ class Sandbox:
 
 	async def existing(self, **kwargs):
 		page = await self.__new_page()
-		await self.__goto_browser_extension(page)
+		await self.__goto_spa(page)
 		if await self.__is_not_created(page):
 			await self.__tick(page)
 			await self.__submit(page, "button", "import an existing wallet")
@@ -495,7 +349,7 @@ class Sandbox:
 
 	async def unlock(self, **kwargs):
 		page = await self.__new_page()
-		await self.__goto_browser_extension(page)
+		await self.__goto_spa(page)
 		if await self.__is_created(page):
 			password = get_extra_value(**kwargs) # pass a [wrong] password as an extra value
 			await self.__unlock(page, password)
@@ -503,7 +357,7 @@ class Sandbox:
 
 	async def unlock_brute_force(self, **kwargs):
 		page = await self.__new_page()
-		await self.__goto_browser_extension(page)
+		await self.__goto_spa(page)
 		if await self.__is_created(page):
 			await self.__lock(page)
 			wordlist = get_extra_value(**kwargs) # pass a wordlist as an extra value
@@ -521,7 +375,7 @@ class Sandbox:
 
 	async def idle_lock(self, **kwargs):
 		page = await self.__new_page()
-		await self.__goto_browser_extension(page)
+		await self.__goto_spa(page)
 		if await self.__is_created(page):
 			await self.__unlock(page)
 			await self.__submit(page, "button[data-testid=account-options-menu-button]")
@@ -532,14 +386,14 @@ class Sandbox:
 			wait_time = 2 * 60 + 5 # 2 minutes and 5 seconds
 			print_info(f"Waiting {wait_time} sec for the wallet to auto-lock...")
 			await self.__wait(page, wait_time)
-			await self.__goto_browser_extension(page)
+			await self.__goto_spa(page)
 			if not await self.__locked(page):
 				print_alert("Auto-lock does not work properly")
 		# await self.__close(page)
 
 	async def access_control(self, **kwargs):
 		page = await self.__new_page()
-		await self.__goto_browser_extension(page)
+		await self.__goto_spa(page)
 		if await self.__is_created(page):
 			state = get_extra_value(**kwargs).lower() # pass a lock state as an extra value
 			if state == "locked":
@@ -605,7 +459,7 @@ class Sandbox:
 				if success:
 					tmp = await self.__new_page()
 				success = False
-				await self.__goto_browser_extension(tmp, path)
+				await self.__goto_spa(tmp, path)
 				size = await self.__get_size(tmp, "div[id=app-content]") if await self.__is_visible(tmp, "div[id=app-content]") else 0
 				if size < 1 or (state == "locked" and await self.__locked(tmp)) or (state == "unlocked" and await self.__is_visible(tmp, "div[class=wallet-overview__balance]")):
 					continue
@@ -620,58 +474,28 @@ class Sandbox:
 
 class Test:
 
-	def __init__(self, browser, session, extension, identifier, password, test, value, wait, dev, proxy):
-		session, extension = self.__get_environment(browser, session, extension, identifier)
+	def __init__(self, browser, session, password, test, value, wait, dev, proxy):
+		session            = self.__get_environment(session)
 		self.event_loop    = self.__get_runtime()
 		self.test          = test
 		self.value         = value
 		self.sandbox       = Sandbox(
-			browser   = browser,
-			session   = session,
-			extension = extension,
-			password  = password,
-			wait      = wait,
-			dev       = dev,
-			proxy     = proxy
+			browser  = browser,
+			session  = session,
+			password = password,
+			wait     = wait,
+			dev      = dev,
+			proxy    = proxy
 		)
 
-	def __get_environment(self, browser, session, extension, identifier, destination = "browser_extension"):
-		success = True
+	def __get_environment(self, session):
 		if not session:
 			session = directory_create_tmp()
 			print_info(f"User session directory was not specified, creating a new \"{session}\" random directory...")
-			print_info(f"Next time, to continue using the same browser session, run the following command:\n    python3 automation.py -s \"{session}\"")
-		else:
-			success = directory_create(session)
-		if success:
-			destination = os.path.join(session, destination if browser == "chromium" else f"{destination}.xpi")
-			if extension:
-				success = directory_has_manifest(extension) if browser == "chromium" else True
-				if success:
-					if browser == "chromium":
-						print_info(f"Copying \"{extension}\" directory to \"{destination}\" directory...")
-						success = directory_copy(extension, destination)
-					else:
-						print_info(f"Copying \"{extension}\" file to \"{destination}\" file...")
-						success = file_copy(extension, destination)
-			elif os.path.exists(destination):
-				pass
-			else:
-				print_info("Searching for the browser extension...")
-				extension = directory_get_browser_extension(browser, identifier)
-				success = bool(extension)
-				if success:
-					if browser == "chromium":
-						print_info(f"Copying \"{extension}\" directory to \"{destination}\" directory...")
-						success = directory_copy(extension, destination)
-					else:
-						print_info(f"Copying \"{extension}\" file to \"{destination}\" file...")
-						success = file_copy(extension, destination)
-		if not success:
-			print_info(f"Removing \"{session}\" directory...")
-			directory_remove(session)
+			print_info(f"Next time, to continue using the same browser session, run the following command:\n    python3 spa_automation.py -s \"{session}\"")
+		elif not directory_create(session):
 			exit()
-		return session, destination
+		return session
 
 	def __get_runtime(self):
 		asyncio.set_event_loop(asyncio.new_event_loop())
@@ -696,8 +520,7 @@ class MyParser(argparse.ArgumentParser):
 
 	def __init__(self, *args, **kwargs):
 		super(MyParser, self).__init__(*args, **kwargs)
-		self.browsers   = ["chromium"] # playwright does not actually support firefox extensions
-		self.identifier = "nkbihfbeogaeaoehlefnkodbefgpgknn" # for auto-locating the browser extension
+		self.browsers   = ["chromium", "firefox"]
 		self.password   = "Password123!" # browser extension setup and unlock password
 		self.tests      = ["open", "create", "existing", "unlock", "brute_force_unlock", "idle_lock", "access_control"] # to run new tests, add the flows (method names) inside this array
 		self.wait       = 2 # default wait time
@@ -707,12 +530,12 @@ class MyParser(argparse.ArgumentParser):
 		exit()
 
 	def print_help(self):
-		print("Automation v1.1 ( https://github.com/ivan-sincek/browser-extension-automation )")
+		print("SPA Automation v1.1 ( https://github.com/ivan-sincek/browser-extension-automation )")
 		print("")
-		print("Usage: python3 automation.py [-b browser] [-s session] [-e extension] [-i identifier] [-p password] [-t test] [-v value] [-w wait] [--dev] [-x proxy]")
+		print("Usage: python3 spa_automation.py [-b browser] [-s session] [-p password] [-t test] [-v value] [-w wait] [--dev] [-x proxy]")
 		print("")
 		print("DESCRIPTION")
-		print("    Browser extension automation script")
+		print("    SPA automation script")
 		print("BROWSER")
 		print("    Browser to run")
 		print(f"    Default: {self.browsers[0]}")
@@ -720,15 +543,7 @@ class MyParser(argparse.ArgumentParser):
 		print("SESSION")
 		print("    User session directory")
 		print("    Default: random")
-		print("    -s, --session = my_automation_session | etc.")
-		print("EXTENSION")
-		print("    Browser extension directory")
-		print("    Default: auto-located based on the identifier")
-		print(f"    -e, --extension = dist | \"/Users/john.doe/Library/Application Support/Google/Chrome/Default/Extensions/{self.identifier}/11.13.1_0\" | etc.")
-		print("IDENTIFIER")
-		print("    Browser extension identifier")
-		print(f"    Default: {self.identifier}")
-		print(f"    -i, --identifier = {self.identifier} | etc.")
+		print("    -s, --session = my_spa_automation_session | etc.")
 		print("PASSWORD")
 		print("    Browser extension setup and unlock password")
 		print(f"    Default: {self.password}")
@@ -761,28 +576,24 @@ class MyParser(argparse.ArgumentParser):
 
 if __name__ == "__main__":
 	parser = MyParser(usage = None)
-	parser.add_argument("-b", "--browser"   , required = False, type   = str         , default = parser.browsers[0], choices = parser.browsers)
-	parser.add_argument("-s", "--session"   , required = False, type   = str         , default = ""                                           )
-	parser.add_argument("-e", "--extension" , required = False, type   = str         , default = ""                                           )
-	parser.add_argument("-i", "--identifier", required = False, type   = str         , default = parser.identifier                            )
-	parser.add_argument("-p", "--password"  , required = False, type   = str         , default = parser.password                              )
-	parser.add_argument("-t", "--test"      , required = False, type   = str         , default = parser.tests[0]   , choices = parser.tests   )
-	parser.add_argument("-v", "--value"     , required = False, type   = str         , default = ""                                           )
-	parser.add_argument("-w", "--wait"      , required = False, type   = int         , default = parser.wait                                  )
-	parser.add_argument("-d", "--dev"       , required = False, action = "store_true", default = False                                        )
-	parser.add_argument("-x", "--proxy"     , required = False, type   = str         , default = ""                                           )
+	parser.add_argument("-b", "--browser" , required = False, type   = str         , default = parser.browsers[0], choices = parser.browsers)
+	parser.add_argument("-s", "--session" , required = False, type   = str         , default = ""                                           )
+	parser.add_argument("-p", "--password", required = False, type   = str         , default = parser.password                              )
+	parser.add_argument("-t", "--test"    , required = False, type   = str         , default = parser.tests[0]   , choices = parser.tests   )
+	parser.add_argument("-v", "--value"   , required = False, type   = str         , default = ""                                           )
+	parser.add_argument("-w", "--wait"    , required = False, type   = int         , default = parser.wait                                  )
+	parser.add_argument("-d", "--dev"     , required = False, action = "store_true", default = False                                        )
+	parser.add_argument("-x", "--proxy"   , required = False, type   = str         , default = ""                                           )
 	args = parser.parse_args()
 	# ------------------------------------
 	test = Test(
-		browser    = args.browser,
-		session    = args.session,
-		extension  = args.extension,
-		identifier = args.identifier,
-		password   = args.password,
-		test       = args.test,
-		value      = args.value,
-		wait       = args.wait,
-		dev        = args.dev,
-		proxy      = args.proxy
+		browser  = args.browser,
+		session  = args.session,
+		password = args.password,
+		test     = args.test,
+		value    = args.value,
+		wait     = args.wait,
+		dev      = args.dev,
+		proxy    = args.proxy
 	)
 	test.run()
