@@ -115,7 +115,7 @@ class Sandbox:
 			ignore_https_errors = True,
 			java_script_enabled = True,
 			accept_downloads    = True,
-			proxy               = { "server": self.__proxy } if self.proxy else None,
+			proxy               = { "server": self.proxy } if self.proxy else None,
 			user_agent          = self.user_agent,
 			user_data_dir       = self.session,
 			downloads_path      = self.settings["downloads"],
