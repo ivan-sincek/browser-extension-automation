@@ -11,7 +11,7 @@ Whom is this script intended for?
 
 For demonstration purposes, this script is based on [MetaMask](https://chromewebstore.google.com/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn) (v11.13.1) browser extension for Chrome web browser, but can easily be modified to suit all of your needs.
 
-__As of this writing, Playwright only supports Chromium browser extensions.__
+**As of this writing, Playwright only supports Chromium browser extensions.**
 
 Tested on:
 
@@ -74,9 +74,9 @@ If `-e` option is not specified, the script will try to locate, copy, and load t
 
 If `-t` option is not specified, the script will open a web browser and only load the browser extension.
 
-__To continue using the same browser session, simply run the above command again.__
+**To continue using the same browser session, simply run the above command again.**
 
-__If you wish to update your browser extension, then, inside your `my_automation_session` directory, delete the `browser_extension` directory and simply run the above command again.__
+**If you wish to update your browser extension, then, inside your `my_automation_session` directory, delete the `browser_extension` directory and simply run the above command again.**
 
 If a browser extension already exists in your user session directory, you will be prompted to overwrite it.
 
@@ -88,7 +88,7 @@ Unpack your desired Chrome browser extension, then, load the `dist` directory:
 python3 automation.py -s my_automation_session -e dist --dev
 ```
 
-__To switch the internal script settings to the development environment, add `--dev` option.__
+**To switch the internal script settings to the development environment, add `--dev` option.**
 
 ## For Developers
 
@@ -102,7 +102,7 @@ Follow the comments inside the source code for more information.
 ## Usage
 
 ```fundamental
-Automation v1.1 ( https://github.com/ivan-sincek/browser-extension-automation )
+Automation v1.2 ( https://github.com/ivan-sincek/browser-extension-automation )
 
 Usage: python3 automation.py [-b browser] [-s session] [-e extension] [-i identifier] [-p password] [-t test] [-v value] [-w wait] [--dev] [-x proxy]
 

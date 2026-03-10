@@ -1,36 +1,36 @@
 #!/usr/bin/env python3
 
 import argparse, asyncio, json, os, platform, re, shutil, tempfile
-from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
-from playwright._impl._errors import TargetClosedError as PlaywrightTargetClosedError, Error as PlaywrightError
+from playwright.async_api import async_playwright, Page, Download, Error as PlaywrightError, TimeoutError as PlaywrightTimeoutError
+from playwright._impl._errors import TargetClosedError as PlaywrightTargetClosedError
 
 # ----------------------------------------
 
-def print_info(text):
+def print_info(text: str):
 	print(f"[+] {text}")
 
-def print_alert(text):
+def print_alert(text: str):
 	print(f"[!] {text}")
 
-def print_action(text):
+def print_action(text: str):
 	return input(f"[?] {text}")
 
-def print_download(text):
+def print_download(text: str):
 	print(f"[>] {text}")
 
-def print_error(text):
+def print_error(text: str):
 	print(f"[-] {text}")
 
 # ----------------------------------------
 
-def unique(sequence, sort = False): # unique sort
+def unique(sequence: list[str], sort = False): # unique sort
 	seen = set()
 	array = [x for x in sequence if not (x in seen or seen.add(x))]
 	if sort and array:
 		array = sorted(array, key = str.casefold, reverse = False) # sort by name ascending
 	return array
 
-def read_array(file, sort = False):
+def read_array(file: str, sort = False):
 	array = []
 	if not os.path.isfile(file):
 		print_error(f"\"{file}\" is not a file or does not exist")
@@ -46,7 +46,7 @@ def read_array(file, sort = False):
 					array.append(line)
 	return unique(array, sort)
 
-def file_remove(file):
+def file_remove(file: str):
 	success = True
 	if os.path.exists(file):
 		if not os.path.isfile(file):
@@ -60,7 +60,7 @@ def file_remove(file):
 				print_error(f"Cannot remove \"{file}\" file")
 	return success
 
-def file_copy(source, destination):
+def file_copy(source: str, destination: str):
 	success = True
 	if not os.path.isfile(source):
 		success = False
@@ -80,7 +80,7 @@ def file_copy(source, destination):
 			print_error(f"Cannot copy \"{source}\" file to \"{destination}\" file")
 	return success
 
-def directory_remove(directory):
+def directory_remove(directory: str):
 	success = True
 	if os.path.exists(directory):
 		if not os.path.isdir(directory):
@@ -94,7 +94,7 @@ def directory_remove(directory):
 				print_error(f"Cannot remove \"{directory}\" directory")
 	return success
 
-def directory_create(directory):
+def directory_create(directory: str):
 	success = True
 	if not os.path.exists(directory):
 		try:
@@ -107,7 +107,7 @@ def directory_create(directory):
 def directory_create_tmp():
 	return tempfile.mkdtemp(prefix = "automation_", suffix = "_session", dir = os.getcwd()) # create a new random directory in the current working directory and return its absolute path
 
-def directory_copy(source, destination):
+def directory_copy(source: str, destination: str):
 	success = True
 	if not os.path.isdir(source):
 		success = False
@@ -127,7 +127,7 @@ def directory_copy(source, destination):
 			print_error(f"Cannot copy \"{source}\" directory to \"{destination}\" directory")
 	return success
 
-def directory_has_manifest(directory):
+def directory_has_manifest(directory: str):
 	success = True
 	if not os.path.isdir(directory):
 		success = False
@@ -137,7 +137,7 @@ def directory_has_manifest(directory):
 		print_error(f"\"manifest.json\" file was not found in \"{directory}\" directory")
 	return success
 
-def directory_get_chromium_extension(directory):
+def directory_get_chromium_extension(directory: str):
 	extension = ""
 	if not os.path.isdir(directory):
 		print_error(f"\"{directory}\" is not a directory or does not exist")
@@ -151,7 +151,7 @@ def directory_get_chromium_extension(directory):
 				extension = directory
 	return extension
 
-def directory_get_firefox_extension(directory, identifier): # playwright does not actually support firefox extensions
+def directory_get_firefox_extension(directory: str, identifier: str): # playwright does not actually support firefox extensions
 	extension = ""
 	if not os.path.isdir(directory):
 		print_error(f"\"{directory}\" is not a directory or does not exist")
@@ -168,7 +168,7 @@ def directory_get_firefox_extension(directory, identifier): # playwright does no
 				extension = file
 	return extension
 
-def directory_get_browser_extension(browser, identifier):
+def directory_get_browser_extension(browser: str, identifier: str):
 	extension = ""
 	system = platform.system().lower()
 	user = os.path.expanduser("~")
@@ -193,7 +193,7 @@ def directory_get_browser_extension(browser, identifier):
 
 # ----------------------------------------
 
-def get_extra_value(numeric = False, **kwargs):
+def get_extra_value(numeric = False, **kwargs) -> str | int:
 	value = kwargs["value"] if kwargs and "value" in kwargs else ""
 	if numeric:
 		if not value:
@@ -209,7 +209,7 @@ def get_extra_value(numeric = False, **kwargs):
 
 class Sandbox:
 
-	def __init__(self, browser, session, extension, password, wait, dev, proxy):
+	def __init__(self, browser: str, session: str, extension: str, password: str, wait: int, dev: bool, proxy: str):
 		self.browser    = browser
 		self.session    = os.path.abspath(session)
 		self.extension  = os.path.abspath(extension)
@@ -269,7 +269,7 @@ class Sandbox:
 		# --------------------------------
 		print_info(f"Running a {self.browser} sandbox...")
 
-	async def __get_url(self):
+	async def __get_url(self) -> str:
 		manifest_version = json.loads(open(os.path.join(self.extension, "manifest.json"), "r", encoding = "UTF-8").read())["manifest_version"]
 		if manifest_version >= 3:
 			return (await self.context.wait_for_event("serviceworker") if not self.context.service_workers else self.context.service_workers[0]).url
@@ -285,72 +285,73 @@ class Sandbox:
 	async def __new_page(self):
 		return await self.context.new_page()
 
-	async def __close(self, page, close = True):
+	async def __close(self, page: Page, close = True):
 		if close:
 			await page.close()
 
-	async def __wait(self, page, override = -1):
+	async def __wait(self, page: Page, override = -1):
 		if override > 0:
 			await asyncio.sleep(override) # override the default wait time
 		elif self.settings["wait_time"] > 0:
 			await asyncio.sleep(self.settings["wait_time"]) # default wait time
 		await page.wait_for_load_state(self.settings["wait_state"])
 
-	async def __goto(self, page, url):
+	async def __goto(self, page: Page, url: str):
 		response = await page.goto(url)
 		await self.__wait(page) # web pages usually need some time to fully load
 		return response
 
-	async def __goto_browser_extension(self, page, path = ""):
+	async def __goto_browser_extension(self, page: Page, path = ""):
 		if not path:
 			path = self.settings["home_page"]
 		return await self.__goto(page, f"{self.settings['url_base']}/{path.lstrip('/')}")
 
-	async def __save_file(self, download):
+	async def __save_file(self, download: Download):
 		filename = self.settings["downloads"] + os.path.sep + download.suggested_filename
 		await download.save_as(filename)
 		print_download(f"Downloaded file was saved at \"{filename}\"")
 
-	def __handle_downloads(self, page):
+	def __handle_downloads(self, page: Page):
 		page.on("download", self.__save_file)
 
-	def __accept_popups(self, page, accept = True):
+	def __accept_popups(self, page: Page, accept = True):
 		page.on("dialog", lambda dialog: dialog.accept() if accept else dialog.dismiss())
 
 	# ------------------------------------
 
-	def __locate(self, page, css, text = ""):
+	def __locate(self, page: Page, css: str, text = ""):
 		return page.locator(css).filter(has_text = text) # you can also pass a regular expression compiled with "re.compile()" as "text"
 
-	async def __get_text(self, page, css, text = ""):
-		return await self.__locate(page, css, text).text_content()
+	async def __get_text(self, page: Page, css: str, text = ""):
+		tmp = await self.__locate(page, css, text).text_content()
+		return "" if tmp is None else tmp
 
-	async def __get_size(self, page, css, text = ""):
+	async def __get_size(self, page: Page, css: str, text = ""):
 		return len(await self.__get_text(page, css, text))
 
-	async def __is_enabled(self, page, css, text = ""):
+	async def __is_enabled(self, page: Page, css: str, text = ""):
 		return await self.__locate(page, css, text).is_enabled() # readonly also returns "False"
 
-	async def __is_visible(self, page, css, text = ""):
+	async def __is_visible(self, page: Page, css: str, text = ""):
 		return await self.__locate(page, css, text).is_visible()
 
-	async def __fill(self, page, value, css = ""):
+	async def __fill(self, page: Page, value: str, css = ""):
 		if not css:
 			css = self.settings["css_text"]
 		await self.__locate(page, css).fill(value)
 
-	async def __fill_sequentially(self, page, value, css = ""):
+	async def __fill_sequentially(self, page: Page, value: str, css = ""):
 		if not css:
 			css = self.settings["css_text"]
 		for i in range(len(value)):
 			await self.__locate(page, f"{css}>>nth={i}").press_sequentially(value[i])
 
-	async def __tick(self, page, css = ""):
+	async def __tick(self, page: Page, css = ""):
 		if not css:
 			css = self.settings["css_checkbox"]
 		await self.__locate(page, css).click()
 
-	async def __submit(self, page, css = "", text = ""):
+	async def __submit(self, page: Page, css = "", text = ""):
 		if not css:
 			css = self.settings["css_submit"]
 		await self.__locate(page, css, text).click()
@@ -358,36 +359,36 @@ class Sandbox:
 
 	# ------------------------------------ GENERIC BUILDING BLOCKS (MULTIPLE ACTIONS)
 
-	async def __create_password_submit(self, page, password = "", css = "", text = ""): # fill in twice
+	async def __create_password_submit(self, page: Page, password = "", css = "", text = ""): # fill in twice
 		if not password:
 			password = self.settings["password"]
 		for i in range(2):
 			await self.__fill(page, password, f"{self.settings['css_password']}>>nth={i}")
 		await self.__submit(page, css, text)
 
-	async def __fill_password_submit(self, page, password = "", css = "", text = ""): # fill in once
+	async def __fill_password_submit(self, page: Page, password = "", css = "", text = ""): # fill in once
 		if not password:
 			password = self.settings["password"]
 		await self.__fill(page, password, self.settings["css_password"])
 		await self.__submit(page, css, text)
 
-	async def __fill_sequentially_password_submit(self, page, password, css = "", text = ""): # fill in a mnemonic where each word has a separate input field | pass an array as "password"
+	async def __fill_sequentially_password_submit(self, page: Page, password: str, css = "", text = ""): # fill in a mnemonic where each word has a separate input field | pass an array as "password"
 		await self.__fill_sequentially(page, password, self.settings["css_password"])
 		await self.__submit(page, css, text)
 
-	async def __fill_email_submit(self, page, email, css = "", text = ""):
+	async def __fill_email_submit(self, page: Page, email: str, css = "", text = ""):
 		await self.__fill(page, email, self.settings["css_email"])
 		await self.__submit(page, css, text)
 
-	async def __fill_text_submit(self, page, value, css = "", text = ""):
+	async def __fill_text_submit(self, page: Page, value: str, css = "", text = ""):
 		await self.__fill(page, value)
 		await self.__submit(page, css, text)
 
-	async def __fill_sequentially_text_submit(self, page, value, css = "", text = ""): # fill in an OTP where each digit has a separate input field | pass a string as "value"
+	async def __fill_sequentially_text_submit(self, page: Page, value: str, css = "", text = ""): # fill in an OTP where each digit has a separate input field | pass a string as "value"
 		await self.__fill_sequentially(page, value)
 		await self.__submit(page, css, text)
 
-	async def __get_cookie(self, name, url = None): # get a [session] cookie
+	async def __get_cookie(self, name: str, url: str | None = None): # get a [session] cookie
 		cookie = ""
 		name = name.lower()
 		for entry in await self.context.cookies(url):
@@ -395,7 +396,7 @@ class Sandbox:
 				cookie = entry["value"]
 				break
 		return cookie
-	
+
 	# ------------------------------------ WEBHOOK BUILDING BLOCKS
 
 	async def __webhook_start(self): # collaborator server / email service
@@ -413,38 +414,39 @@ class Sandbox:
 		# --------------------------------
 		return page, email, dns
 
-	async def __webhook_get_email_text(self, page, timeout = -1):
+	async def __webhook_get_email_text(self, page: Page, timeout = -1):
 		timeout = timeout * 1000 if timeout > 0 else self.timeout # override the default timeout
 		print_info(f"Waiting {timeout / 1000} sec for the webhook to arrive...")
-		return await self.__locate(page, "pre>>nth=0").text_content(timeout = timeout)
+		email = await self.__locate(page, "pre>>nth=0").text_content(timeout = timeout)
+		return "" if email is None else email
 
 	# ------------------------------------ METAMASK FLOWS
 
-	async def __created(self, page):
+	async def __created(self, page: Page):
 		return not await self.__is_visible(page, "button", "create a new wallet")
 
-	async def __is_created(self, page):
+	async def __is_created(self, page: Page):
 		created = await self.__created(page)
 		if not created:
 			print_error("Wallet is not created")
 		return created
 
-	async def __is_not_created(self, page):
+	async def __is_not_created(self, page: Page):
 		created = await self.__created(page)
 		if created:
 			print_error("Wallet is already created")
 		return not created
 
-	async def __locked(self, page):
+	async def __locked(self, page: Page):
 		return await self.__is_visible(page, "button", "unlock")
 
-	async def __unlock(self, page, password = ""):
+	async def __unlock(self, page: Page, password = ""):
 		if await self.__locked(page):
 			await self.__fill_password_submit(page, password, "button", "unlock")
 			if await self.__is_visible(page, "button[data-testid=popover-close]"): # close a pop-up
 				await self.__submit(page, "button[data-testid=popover-close]")
 
-	async def __lock(self, page):
+	async def __lock(self, page: Page):
 		if not await self.__locked(page):
 			await self.__goto_browser_extension(page, f"{self.settings['home_page']}#lock")
 
@@ -620,7 +622,7 @@ class Sandbox:
 
 class Test:
 
-	def __init__(self, browser, session, extension, identifier, password, test, value, wait, dev, proxy):
+	def __init__(self, browser: str, session: str, extension: str, identifier: str, password: str, test: str, value: str, wait: int, dev: bool, proxy: str):
 		session, extension = self.__get_environment(browser, session, extension, identifier)
 		self.event_loop    = self.__get_runtime()
 		self.test          = test
@@ -635,7 +637,7 @@ class Test:
 			proxy     = proxy
 		)
 
-	def __get_environment(self, browser, session, extension, identifier, destination = "browser_extension"):
+	def __get_environment(self, browser: str, session: str, extension: str, identifier: str, destination = "browser_extension"):
 		success = True
 		if not session:
 			session = directory_create_tmp()
@@ -702,12 +704,12 @@ class MyParser(argparse.ArgumentParser):
 		self.tests      = ["open", "create", "existing", "unlock", "brute_force_unlock", "idle_lock", "access_control"] # to run new tests, add the flows (method names) inside this array
 		self.wait       = 2 # default wait time
 
-	def error(self, message):
+	def error(self, message: str):
 		print_error(f"Error: {message}")
 		exit()
 
 	def print_help(self):
-		print("Automation v1.1 ( https://github.com/ivan-sincek/browser-extension-automation )")
+		print("Automation v1.2 ( https://github.com/ivan-sincek/browser-extension-automation )")
 		print("")
 		print("Usage: python3 automation.py [-b browser] [-s session] [-e extension] [-i identifier] [-p password] [-t test] [-v value] [-w wait] [--dev] [-x proxy]")
 		print("")
