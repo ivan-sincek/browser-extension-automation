@@ -91,16 +91,18 @@ class Sandbox:
 			"password"    : password, # SPA setup and unlock password
 			"wait_time"   : wait, # default wait time
 			"wait_state"  : "load",
-			"css_root"    : "body",
-			"css_submit"  : "input[type=submit]",
-			"css_checkbox": "input[type=checkbox]",
-			"css_text"    : "input[type=text]",
-			"css_email"   : "input[type=email]",
-			"css_password": "input[type=password]",
 			"home_page"   : "home.html", # SPA home page
 			"url_base"    : "https://wallet.uniswap.org", # SPA base url | specify
 			"url_dapp"    : "https://app.uniswap.org" if not self.dev else "https://app.uniswap.org" # use "self.dev" throughout the code to switch between environments
 		} # change the default variables as necessary
+		self.selectors  = {
+			"root"    : "body",
+			"submit"  : "input[type=submit]",
+			"checkbox": "input[type=checkbox]",
+			"text"    : "input[type=text]",
+			"email"   : "input[type=email]",
+			"password": "input[type=password]"
+		}
 
 	async def browser_start(self):
 		self.playwright = await async_playwright().start()
@@ -173,74 +175,74 @@ class Sandbox:
 
 	# ------------------------------------
 
-	def __locate(self, page: Page, css: str, text = ""):
-		return page.locator(css).filter(has_text = text) # you can also pass a regular expression compiled with "re.compile()" as "text"
+	def __locate(self, page: Page, selector: str, text = ""):
+		return page.locator(selector).filter(has_text = text) # you can also pass a regular expression compiled with "re.compile()" as "text"
 
-	async def __get_text(self, page: Page, css: str, text = ""):
-		tmp = await self.__locate(page, css, text).text_content()
+	async def __get_text(self, page: Page, selector: str, text = ""):
+		tmp = await self.__locate(page, selector, text).text_content()
 		return "" if tmp is None else tmp
 
-	async def __get_size(self, page: Page, css: str, text = ""):
-		return len(await self.__get_text(page, css, text))
+	async def __get_size(self, page: Page, selector: str, text = ""):
+		return len(await self.__get_text(page, selector, text))
 
-	async def __is_enabled(self, page: Page, css: str, text = ""):
-		return await self.__locate(page, css, text).is_enabled() # readonly also returns "False"
+	async def __is_enabled(self, page: Page, selector: str, text = ""):
+		return await self.__locate(page, selector, text).is_enabled() # readonly also returns "False"
 
-	async def __is_visible(self, page: Page, css: str, text = ""):
-		return await self.__locate(page, css, text).is_visible()
+	async def __is_visible(self, page: Page, selector: str, text = ""):
+		return await self.__locate(page, selector, text).is_visible()
 
-	async def __fill(self, page: Page, value: str, css = ""):
-		if not css:
-			css = self.settings["css_text"]
-		await self.__locate(page, css).fill(value)
+	async def __fill(self, page: Page, value: str, selector = ""):
+		if not selector:
+			selector = self.selectors["text"]
+		await self.__locate(page, selector).fill(value)
 
-	async def __fill_sequentially(self, page: Page, value: str, css = ""):
-		if not css:
-			css = self.settings["css_text"]
+	async def __fill_sequentially(self, page: Page, value: str, selector = ""):
+		if not selector:
+			selector = self.selectors["text"]
 		for i in range(len(value)):
-			await self.__locate(page, f"{css}>>nth={i}").press_sequentially(value[i])
+			await self.__locate(page, f"{selector}>>nth={i}").press_sequentially(value[i])
 
-	async def __tick(self, page: Page, css = ""):
-		if not css:
-			css = self.settings["css_checkbox"]
-		await self.__locate(page, css).click()
+	async def __tick(self, page: Page, selector = ""):
+		if not selector:
+			selector = self.selectors["checkbox"]
+		await self.__locate(page, selector).click()
 
-	async def __submit(self, page: Page, css = "", text = ""):
-		if not css:
-			css = self.settings["css_submit"]
-		await self.__locate(page, css, text).click()
+	async def __submit(self, page: Page, selector = "", text = ""):
+		if not selector:
+			selector = self.selectors["submit"]
+		await self.__locate(page, selector, text).click()
 		await self.__wait(page) # web forms usually need some time to be processed
 
 	# ------------------------------------ GENERIC BUILDING BLOCKS (MULTIPLE ACTIONS)
 
-	async def __create_password_submit(self, page: Page, password = "", css = "", text = ""): # fill in twice
+	async def __create_password_submit(self, page: Page, password = "", selector = "", text = ""): # fill in twice
 		if not password:
 			password = self.settings["password"]
 		for i in range(2):
-			await self.__fill(page, password, f"{self.settings['css_password']}>>nth={i}")
-		await self.__submit(page, css, text)
+			await self.__fill(page, password, f"{self.selectors['password']}>>nth={i}")
+		await self.__submit(page, selector, text)
 
-	async def __fill_password_submit(self, page: Page, password = "", css = "", text = ""): # fill in once
+	async def __fill_password_submit(self, page: Page, password = "", selector = "", text = ""): # fill in once
 		if not password:
 			password = self.settings["password"]
-		await self.__fill(page, password, self.settings["css_password"])
-		await self.__submit(page, css, text)
+		await self.__fill(page, password, self.selectors["password"])
+		await self.__submit(page, selector, text)
 
-	async def __fill_sequentially_password_submit(self, page: Page, password: str, css = "", text = ""): # fill in a mnemonic where each word has a separate input field | pass an array as "password"
-		await self.__fill_sequentially(page, password, self.settings["css_password"])
-		await self.__submit(page, css, text)
+	async def __fill_sequentially_password_submit(self, page: Page, password: str, selector = "", text = ""): # fill in a mnemonic where each word has a separate input field | pass an array as "password"
+		await self.__fill_sequentially(page, password, self.selectors["password"])
+		await self.__submit(page, selector, text)
 
-	async def __fill_email_submit(self, page: Page, email: str, css = "", text = ""):
-		await self.__fill(page, email, self.settings["css_email"])
-		await self.__submit(page, css, text)
+	async def __fill_email_submit(self, page: Page, email: str, selector = "", text = ""):
+		await self.__fill(page, email, self.selectors["email"])
+		await self.__submit(page, selector, text)
 
-	async def __fill_text_submit(self, page: Page, value: str, css = "", text = ""):
+	async def __fill_text_submit(self, page: Page, value: str, selector = "", text = ""):
 		await self.__fill(page, value)
-		await self.__submit(page, css, text)
+		await self.__submit(page, selector, text)
 
-	async def __fill_sequentially_text_submit(self, page: Page, value: str, css = "", text = ""): # fill in an OTP where each digit has a separate input field | pass a string as "value"
+	async def __fill_sequentially_text_submit(self, page: Page, value: str, selector = "", text = ""): # fill in an OTP where each digit has a separate input field | pass a string as "value"
 		await self.__fill_sequentially(page, value)
-		await self.__submit(page, css, text)
+		await self.__submit(page, selector, text)
 
 	async def __get_cookie(self, name: str, url: str | None = None): # get a [session] cookie
 		cookie = ""
@@ -319,7 +321,7 @@ class Sandbox:
 			await self.__submit(page, "button", "create a new wallet")
 			await self.__submit(page, "button", "no thanks")
 			await self.__tick(page)
-			await self.__create_password_submit(page, css = "button", text = "create a new wallet")
+			await self.__create_password_submit(page, selector = "button", text = "create a new wallet")
 			await self.__submit(page, "button", "remind me later")
 			await self.__tick(page)
 			await self.__submit(page, "button", "skip")
@@ -342,7 +344,7 @@ class Sandbox:
 			else:
 				await self.__fill_sequentially_password_submit(page, mnemonic.split(" "), "button", "confirm Secret Recovery Phrase")
 				await self.__tick(page)
-				await self.__create_password_submit(page, css = "button", text = "import my wallet")
+				await self.__create_password_submit(page, selector = "button", text = "import my wallet")
 				await self.__submit(page, "button", "got it")
 				await self.__submit(page, "button", "next")
 				await self.__submit(page, "button", "done")
@@ -509,6 +511,8 @@ class Test:
 			self.event_loop.run_until_complete(self.sandbox.browser_start())
 			self.event_loop.run_until_complete(getattr(self.sandbox, self.test)(value = self.value))
 			print_action("Done, press any key to exit...")
+		except asyncio.CancelledError:
+			print("Cancelled")
 		except (PlaywrightTargetClosedError, PlaywrightTimeoutError, PlaywrightError, KeyboardInterrupt) as ex:
 			print(ex)
 		finally:
