@@ -92,10 +92,10 @@ python3 automation.py -s my_automation_session -e dist --dev
 
 ## For Developers
 
-* [Generic Building Blocks \(Single Action\)](https://github.com/ivan-sincek/browser-extension-automation/blob/main/src/automation.py#L279)
-* [Generic Building Blocks \(Multiple Actions\)](https://github.com/ivan-sincek/browser-extension-automation/blob/main/src/automation.py#L355)
-* [Webhook Building Blocks \(Collaborator Server / Email Service\)](https://github.com/ivan-sincek/browser-extension-automation/blob/main/src/automation.py#L395)
-* [MetaMask Flows](https://github.com/ivan-sincek/browser-extension-automation/blob/main/src/automation.py#L447)
+* [Generic Building Blocks \(Single Action\)](https://github.com/ivan-sincek/browser-extension-automation/blob/main/src/automation.py#L285)
+* [Generic Building Blocks \(Multiple Actions\)](https://github.com/ivan-sincek/browser-extension-automation/blob/main/src/automation.py#L362)
+* [Webhook Building Blocks \(Collaborator Server / Email Service\)](https://github.com/ivan-sincek/browser-extension-automation/blob/main/src/automation.py#L402)
+* [MetaMask Flows](https://github.com/ivan-sincek/browser-extension-automation/blob/main/src/automation.py#L455)
 
 Follow the comments inside the source code for more information.
 
